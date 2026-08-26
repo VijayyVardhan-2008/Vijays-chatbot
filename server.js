@@ -26,7 +26,7 @@ app.use(cors({
 
 
 /* =========================================================
-   MIDDLEWARE
+   MIDDLEWARE & FRONTEND SERVING
 ========================================================= */
 
 app.use(express.json({
@@ -37,6 +37,14 @@ app.use(express.urlencoded({
     extended: true,
     limit: "20mb"
 }));
+
+// Serve static files from the public folder
+app.use(express.static(path.join(__dirname, "public")));
+
+// Root route - serve index.html
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 
 /* =========================================================
@@ -491,12 +499,6 @@ app.post(
             /*
                Upload the file to Gemini's
                file storage.
-
-               This is especially useful for:
-               images
-               PDFs
-               videos
-               audio
             */
 
             if (!gemini) {
@@ -694,14 +696,6 @@ app.post(
                 provider === "groq"
             ) {
 
-                /*
-                   Groq receives the text conversation.
-
-                   If the current message contains
-                   a file attachment, tell Groq that
-                   the file is available to Gemini.
-                */
-
                 let groqMessage =
                     message || "";
 
@@ -822,36 +816,6 @@ app.post(
             });
 
         }
-
-    }
-);
-
-
-/* =========================================================
-   HEALTH CHECK
-========================================================= */
-
-app.get(
-    "/",
-    (req, res) => {
-
-        res.json({
-
-            status: "online",
-
-            chatbot:
-                "Vijay's Chatbot",
-
-            providers: [
-                "gemini",
-                "groq",
-                "openrouter"
-            ],
-
-            uploads:
-                "enabled"
-
-        });
 
     }
 );
