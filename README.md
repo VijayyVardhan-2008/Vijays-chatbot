@@ -20,28 +20,3 @@ A fast, lightweight, and versatile chatbot interface powered by three distinct A
 
 * **Language:** [Python / JavaScript] *(Update to match your project)*
 * **API Providers:** Google AI Studio, Groq Cloud, OpenReader API
-
----
-
-## 🚀 Getting Started
-
-### 1. Prerequisites
-
-Make sure you have API keys for each provider:
-* [Google Gemini API Key](https://aistudio.google.com/)
-* [Groq API Key](https://console.groq.com/)
-* [OpenReader API Key](https://openreader.dev) *(or your corresponding endpoint)*
-
-### 2. Installation
-
-Clone the repository and install the required dependencies:
-
-```bash
-# Clone the repository
-git clone [https://github.com/your-username/your-repo-name.git](https://github.com/your-username/your-repo-name.git)
-cd your-repo-name
-
-# Install dependencies
-pip install -r requirements.txt   # For Python
-# OR
-npm install                       # For Node.js
