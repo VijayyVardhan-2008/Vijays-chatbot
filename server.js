@@ -26,6 +26,18 @@ app.use(cors({
 
 
 /* =========================================================
+   PWA MANIFEST ROUTE (Must be defined before static middleware)
+========================================================= */
+
+app.get("/manifest.json", (req, res) => {
+    res.setHeader("Content-Type", "application/manifest+json");
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET");
+    res.sendFile(path.join(__dirname, "public", "manifest.json"));
+});
+
+
+/* =========================================================
    MIDDLEWARE & FRONTEND SERVING
 ========================================================= */
 
@@ -40,13 +52,6 @@ app.use(express.urlencoded({
 
 // Serve static files from the public folder
 app.use(express.static(path.join(__dirname, "public")));
-
-// Explicit route for manifest.json with strict PWA headers
-app.get("/manifest.json", (req, res) => {
-    res.setHeader("Content-Type", "application/manifest+json");
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.sendFile(path.join(__dirname, "public", "manifest.json"));
-});
 
 // Root route - serve index.html
 app.get("/", (req, res) => {
