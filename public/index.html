@@ -28,6 +28,27 @@
     --accent: #2563eb;
     --accent-hover: #1d4ed8;
     --user: #2563eb;
+    --card-bg: #ffffff;
+    --input-bg: #ffffff;
+    --hover-bg: #f0f1f3;
+}
+
+/* =========================================================
+   DARK MODE VARIABLES
+========================================================= */
+
+body.dark-mode {
+    --bg: #121212;
+    --sidebar: #1e1e1e;
+    --border: #2d2d2d;
+    --text: #f3f4f6;
+    --muted: #9ca3af;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --user: #2563eb;
+    --card-bg: #1e1e1e;
+    --input-bg: #2a2a2a;
+    --hover-bg: #2a2a2a;
 }
 
 html,
@@ -51,6 +72,7 @@ body {
 body {
     display: flex;
     overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 /* =========================================================
@@ -109,7 +131,7 @@ body {
 
     border: 1px solid var(--border);
 
-    background: white;
+    background: var(--card-bg);
     color: var(--text);
 
     border-radius: 9px;
@@ -124,7 +146,7 @@ body {
 }
 
 .new-chat:hover {
-    background: #f0f1f3;
+    background: var(--hover-bg);
 }
 
 .search {
@@ -136,7 +158,8 @@ body {
 
     border: 1px solid var(--border);
 
-    background: white;
+    background: var(--input-bg);
+    color: var(--text);
 
     border-radius: 9px;
 
@@ -172,7 +195,7 @@ body {
 
     border-radius: 8px;
 
-    color: #4b5563;
+    color: var(--muted);
 
     font-size: 13px;
 
@@ -187,8 +210,8 @@ body {
 
 .history-item:hover,
 .history-item.active {
-    background: #e9eaec;
-    color: #111827;
+    background: var(--hover-bg);
+    color: var(--text);
 }
 
 .sidebar-bottom {
@@ -199,6 +222,10 @@ body {
         var(--border);
 
     padding-top: 12px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .profile {
@@ -239,6 +266,36 @@ body {
 }
 
 /* =========================================================
+   THEME TOGGLE BUTTON
+========================================================= */
+
+.theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--hover-bg);
+}
+
+.topbar-theme-btn {
+    margin-left: auto;
+    width: auto;
+    padding: 6px 12px;
+}
+
+/* =========================================================
    MAIN
 ========================================================= */
 
@@ -262,6 +319,7 @@ body {
 
     display: flex;
     align-items: center;
+    justify-content: space-between;
 
     padding: 0 22px;
 }
@@ -337,6 +395,10 @@ body {
     font-size: 27px;
 }
 
+body.dark-mode .welcome-icon {
+    background: #1e293b;
+}
+
 .welcome h1 {
     margin: 0;
 
@@ -372,7 +434,8 @@ body {
         1px solid
         var(--border);
 
-    background: white;
+    background: var(--card-bg);
+    color: var(--text);
 
     border-radius: 12px;
 
@@ -384,9 +447,9 @@ body {
 }
 
 .suggestion:hover {
-    border-color: #bfdbfe;
+    border-color: var(--accent);
 
-    background: #f8fbff;
+    background: var(--hover-bg);
 }
 
 .suggestion-title {
@@ -443,9 +506,18 @@ body {
     color: var(--accent);
 }
 
+body.dark-mode .bot-avatar {
+    background: #1e293b;
+}
+
 .user-avatar {
     background: #e5e7eb;
     color: #374151;
+}
+
+body.dark-mode .user-avatar {
+    background: #374151;
+    color: #f3f4f6;
 }
 
 .message-content {
@@ -549,7 +621,7 @@ body {
     background:
         linear-gradient(
             transparent,
-            white 24%
+            var(--bg) 24%
         );
 
     padding:
@@ -575,9 +647,9 @@ body {
 
     border:
         1px solid
-        #d1d5db;
+        var(--border);
 
-    background: white;
+    background: var(--card-bg);
 
     border-radius: 15px;
 
@@ -587,7 +659,7 @@ body {
         0
         4px
         18px
-        rgba(0,0,0,.06);
+        rgba(0,0,0,.1);
 }
 
 /* =========================================================
@@ -603,11 +675,11 @@ body {
 
     border:
         1px solid
-        #e5e7eb;
+        var(--border);
 
-    background: #f8f9fa;
+    background: var(--input-bg);
 
-    color: #4b5563;
+    color: var(--text);
 
     border-radius: 8px;
 
@@ -629,9 +701,7 @@ body {
 }
 
 #aiSelect:hover {
-    background: #eef0f2;
-
-    color: #111827;
+    background: var(--hover-bg);
 }
 
 /* =========================================================
@@ -662,10 +732,13 @@ body {
     padding:
         9px
         3px;
+
+    background: transparent;
+    color: var(--text);
 }
 
 #message::placeholder {
-    color: #9ca3af;
+    color: var(--muted);
 }
 
 /* =========================================================
@@ -694,7 +767,7 @@ body {
 }
 
 .composer-button:hover {
-    background: #f3f4f6;
+    background: var(--hover-bg);
 }
 
 /* =========================================================
@@ -978,7 +1051,7 @@ body {
 .footer-note {
     text-align: center;
 
-    color: #9ca3af;
+    color: var(--muted);
 
     font-size: 10px;
 
@@ -1090,6 +1163,11 @@ body {
 
     <div class="sidebar-bottom">
 
+        <button class="theme-toggle-btn" onclick="toggleTheme()">
+            <span class="theme-label">Theme</span>
+            <span class="theme-icon">🌙</span>
+        </button>
+
         <div class="profile">
 
             <div class="avatar">
@@ -1134,6 +1212,10 @@ body {
             </div>
 
         </div>
+
+        <button class="theme-toggle-btn topbar-theme-btn" onclick="toggleTheme()">
+            <span class="theme-icon">🌙</span>
+        </button>
 
     </header>
 
@@ -1382,6 +1464,44 @@ body {
 
 const API_URL =
     "https://vijays-chatbot.onrender.com";
+
+
+/* =========================================================
+   DARK MODE SYSTEM
+========================================================= */
+
+function initTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+        applyTheme("dark");
+    } else {
+        applyTheme("light");
+    }
+}
+
+function toggleTheme() {
+    const isDark = document.body.classList.contains("dark-mode");
+    applyTheme(isDark ? "light" : "dark");
+}
+
+function applyTheme(theme) {
+    const icons = document.querySelectorAll(".theme-icon");
+
+    if (theme === "dark") {
+        document.body.classList.add("dark-mode");
+        localStorage.setItem("theme", "dark");
+        icons.forEach(icon => icon.textContent = "☀️");
+    } else {
+        document.body.classList.remove("dark-mode");
+        localStorage.setItem("theme", "light");
+        icons.forEach(icon => icon.textContent = "🌙");
+    }
+}
+
+// Initialize theme on load
+initTheme();
 
 
 /* =========================================================
@@ -1785,10 +1905,10 @@ function showAttachmentPreview() {
                 "7px";
 
             item.style.background =
-                "#f3f4f6";
+                "var(--card-bg)";
 
             item.style.border =
-                "1px solid #e5e7eb";
+                "1px solid var(--border)";
 
             item.style.borderRadius =
                 "9px";
@@ -1831,6 +1951,7 @@ function showAttachmentPreview() {
                         background:transparent;
                         cursor:pointer;
                         font-size:14px;
+                        color:var(--text);
                     "
                     title="Remove"
                 >
@@ -2583,7 +2704,7 @@ function addMessage(
         files.style.color =
             type === "user"
                 ? "#dbeafe"
-                : "#6b7280";
+                : "var(--muted)";
 
         files.style.marginBottom =
             "6px";
