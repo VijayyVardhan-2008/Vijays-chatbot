@@ -1,28 +1,69 @@
+require("dotenv").config();
+
 const express = require("express");
+const path = require("path");
 const { GoogleGenAI } = require("@google/genai");
-const Groq = require("groq-sdk");
-const OpenAI = require("openai");
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
-// ==========================================
-// SAFE SDK INITIALIZATION (Prevents Deployment Crashes)
-// ==========================================
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "missing_key" });
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || "missing_key" });
-const openrouter = new OpenAI({
-    baseURL: "https://openrouter.ai/api/v1",
-    apiKey: process.env.OPENROUTER_API_KEY || "missing_key"
-});
+/* =========================================
+   MIDDLEWARE
+========================================= */
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+
+/* =========================================
+   CHECK API KEYS & STARTUP LOGS
+========================================= */
+
+console.log("");
+console.log("=================================");
+console.log("        VIJAY'S JARVIS CHATBOT");
+console.log("=================================");
+
+console.log(
+    "Gemini API:",
+    process.env.GEMINI_API_KEY ? "✅ Loaded" : "❌ Missing"
+);
+
+console.log(
+    "Groq API:",
+    process.env.GROQ_API_KEY ? "✅ Loaded" : "❌ Missing"
+);
+
+console.log(
+    "OpenRouter API:",
+    process.env.OPENROUTER_API_KEY ? "✅ Loaded" : "❌ Missing"
+);
+
+console.log("=================================");
+console.log("");
+
+
+/* =========================================
+   SDK INITIALIZATION
+========================================= */
+
+const gemini = process.env.GEMINI_API_KEY
+    ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
+    : null;
 
 const SYSTEM_PROMPT = 
     "You are JARVIS, an extraordinarily intelligent, polite, concise, and helpful AI assistant. " +
     "Address the user as Vijay when appropriate. Keep responses succinct, sharp, and natural for " +
-    "voice output. Avoid long bulleted lists, markdown symbols, or visual formatting.";
+    "voice and text output.";
+
+
+/* =========================================
+   SSML FORMATTER (For Alexa Echo Dot)
+========================================= */
 
 function formatJarvisSSML(text) {
     if (!text) return `<speak><voice name="Brian"><prosody pitch="-28%" rate="88%">Standing by, Vijay.</prosody></voice></speak>`;
+
     const cleanText = String(text)
         .replace(/[*_#`~]/g, "")         
         .replace(/&/g, "and")            
@@ -31,71 +72,133 @@ function formatJarvisSSML(text) {
         .replace(/"/g, "")               
         .replace(/\n+/g, " ")            
         .trim();
+
     return `<speak><voice name="Brian"><prosody pitch="-28%" rate="88%">${cleanText}</prosody></voice></speak>`;
 }
 
-async function askGemini(prompt) {
-    try {
-        const fullPrompt = `${SYSTEM_PROMPT}\n\nUser Query: ${prompt}`;
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: fullPrompt
-        });
-        return response.text || "I processed your request, Vijay, but received no text output.";
-    } catch (err) {
-        console.error("[JARVIS Error - Gemini]:", err.message);
-        return "I encountered a communication error with my Gemini subsystem, Vijay.";
-    }
+
+/* =========================================
+   AI FUNCTIONS
+========================================= */
+
+async function askGemini(message) {
+    if (!gemini) throw new Error("GEMINI_API_KEY is missing from .env");
+
+    const response = await gemini.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: `${SYSTEM_PROMPT}\n\nUser: ${message}`
+    });
+
+    return response.text || "Gemini returned no response.";
 }
 
-async function askGroq(prompt) {
-    try {
-        const response = await groq.chat.completions.create({
+async function askGroq(message) {
+    if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY is missing from .env");
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`
+        },
+        body: JSON.stringify({
+            model: "llama-3.3-70b-versatile",
             messages: [
                 { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: prompt }
+                { role: "user", content: message }
             ],
-            model: "llama-3.3-70b-versatile",
-            temperature: 0.7,
-            max_tokens: 300
-        });
-        return response.choices[0]?.message?.content || "Groq returned an empty response.";
-    } catch (err) {
-        console.error("[JARVIS Error - Groq]:", err.message);
-        return "I am having difficulty connecting to my Groq primary core, Vijay.";
+            temperature: 0.7
+        })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error?.message || "Groq API request failed");
     }
+
+    return data.choices?.[0]?.message?.content || "Groq returned no response.";
 }
 
-async function askOpenRouter(prompt) {
-    try {
-        const response = await openrouter.chat.completions.create({
+async function askOpenRouter(message) {
+    if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is missing from .env");
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "http://localhost:3000",
+            "X-Title": "Vijay's Jarvis Chatbot"
+        },
+        body: JSON.stringify({
             model: "meta-llama/llama-3.3-70b-instruct",
             messages: [
                 { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: prompt }
-            ],
-            temperature: 0.7,
-            max_tokens: 300
-        });
-        return response.choices[0]?.message?.content || "OpenRouter returned an empty result.";
-    } catch (err) {
-        console.error("[JARVIS Error - OpenRouter]:", err.message);
-        return "My OpenRouter routing layer experienced an exception, Vijay.";
+                { role: "user", content: message }
+            ]
+        })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+        throw new Error(data.error?.message || "OpenRouter API request failed");
     }
+
+    return data.choices?.[0]?.message?.content || "OpenRouter returned no response.";
 }
+
+
+/* =========================================
+   WEB CHAT ROUTE (/chat)
+========================================= */
+
+app.post("/chat", async (req, res) => {
+    try {
+        const { message, provider = "gemini" } = req.body;
+
+        console.log(`\n📩 /chat request [${provider}]: ${message}`);
+
+        if (!message) {
+            return res.status(400).json({ error: "Message is required." });
+        }
+
+        let reply = "";
+        if (provider === "groq") {
+            reply = await askGroq(message);
+        } else if (provider === "openrouter") {
+            reply = await askOpenRouter(message);
+        } else {
+            reply = await askGemini(message);
+        }
+
+        console.log(`✅ ${provider} responded successfully`);
+        return res.json({ reply, provider });
+
+    } catch (error) {
+        console.error("\n❌ CHAT ERROR:", error.message);
+        return res.status(500).json({ error: error.message || "Something went wrong." });
+    }
+});
+
+
+/* =========================================
+   ALEXA SKILL ROUTE (/alexa)
+========================================= */
 
 app.post("/alexa", async (req, res) => {
     try {
         const request = req.body.request;
-        if (!request) return res.status(400).json({ error: "Invalid payload" });
+        if (!request) return res.status(400).json({ error: "Invalid Alexa payload" });
 
         const requestType = request.type;
+        console.log(`\n🗣️ Alexa request received: ${requestType}`);
 
         if (requestType === "LaunchRequest") {
+            const welcomeMsg = "Online and operational, Vijay. How can I assist you today?";
             return res.json({
                 version: "1.0",
                 response: {
-                    outputSpeech: { type: "SSML", ssml: formatJarvisSSML("Online and operational, Vijay. How can I assist you today?") },
+                    outputSpeech: { type: "SSML", ssml: formatJarvisSSML(welcomeMsg) },
                     shouldEndSession: false
                 }
             });
@@ -106,7 +209,7 @@ app.post("/alexa", async (req, res) => {
 
             if (intentName === "AskJarvisIntent" || intentName === "AMAZON.FallbackIntent") {
                 let userQuery = request.intent?.slots?.query?.value || "Hello";
-                let selectedProvider = "gemini"; 
+                let selectedProvider = "gemini";
                 const lowerQuery = userQuery.toLowerCase();
 
                 if (lowerQuery.includes("groq")) {
@@ -121,7 +224,7 @@ app.post("/alexa", async (req, res) => {
                 }
 
                 if (!userQuery) userQuery = "Hello";
-                
+
                 let aiReply = "";
                 if (selectedProvider === "groq") aiReply = await askGroq(userQuery);
                 else if (selectedProvider === "openrouter") aiReply = await askOpenRouter(userQuery);
@@ -150,21 +253,27 @@ app.post("/alexa", async (req, res) => {
         return res.json({ version: "1.0", response: { shouldEndSession: true } });
 
     } catch (error) {
-        console.error("Critical Error:", error);
+        console.error("\n❌ ALEXA ERROR:", error.message);
         return res.json({
             version: "1.0",
             response: {
-                outputSpeech: { type: "SSML", ssml: formatJarvisSSML("An unexpected failure occurred within my primary backend, Vijay.") },
+                outputSpeech: { type: "SSML", ssml: formatJarvisSSML("An unexpected failure occurred within my core systems, Vijay.") },
                 shouldEndSession: true
             }
         });
     }
 });
 
-app.get("/", (req, res) => res.send("JARVIS Core Backend is active."));
 
-const PORT = process.env.PORT || 3000;
-// BINDING TO '0.0.0.0' IS REQUIRED FOR CLOUD DEPLOYMENTS
+/* =========================================
+   START SERVER
+========================================= */
+
 app.listen(PORT, "0.0.0.0", () => {
-    console.log(`JARVIS Server listening on port ${PORT}`);
+    console.log("");
+    console.log(`🌐 Server active at http://localhost:${PORT}`);
+    console.log("=================================");
+    console.log("🤖 Gemini + Groq + OpenRouter + Alexa");
+    console.log("=================================");
+    console.log("");
 });
