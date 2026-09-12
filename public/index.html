@@ -1482,6 +1482,19 @@ body.dark-mode .user-avatar {
                 </button>
 
 
+                <!-- JARVIS VOICE TEST -->
+
+                <button
+                    id="jarvisVoiceTest"
+                    class="composer-button"
+                    type="button"
+                    title="Test JARVIS voice"
+                    aria-label="Test JARVIS voice"
+                >
+                    🔊
+                </button>
+
+
                 <!-- SEND -->
 
                 <button
@@ -1514,6 +1527,97 @@ body.dark-mode .user-avatar {
 
 const API_URL =
     "https://vijays-chatbot.onrender.com";
+
+
+/* =========================================================
+   JARVIS ELEVENLABS VOICE
+========================================================= */
+
+async function speakJarvis(text) {
+
+    if (!text || !text.trim()) {
+        return;
+    }
+
+    try {
+
+        console.log("🔊 JARVIS voice:", text);
+
+        const response =
+            await fetch(
+                `${API_URL}/speak`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            text: text
+                        })
+                }
+            );
+
+
+        if (!response.ok) {
+
+            let errorMessage =
+                "Voice request failed.";
+
+            try {
+
+                const errorData =
+                    await response.json();
+
+                errorMessage =
+                    errorData.error ||
+                    errorMessage;
+
+            } catch {}
+
+            throw new Error(
+                errorMessage
+            );
+        }
+
+
+        const audioBlob =
+            await response.blob();
+
+        const audioUrl =
+            URL.createObjectURL(
+                audioBlob
+            );
+
+        const audio =
+            new Audio(audioUrl);
+
+        audio.onended =
+            () => {
+                URL.revokeObjectURL(
+                    audioUrl
+                );
+            };
+
+        await audio.play();
+
+    }
+    catch (error) {
+
+        console.error(
+            "❌ JARVIS voice error:",
+            error
+        );
+
+        alert(
+            "JARVIS voice error:\n" +
+            error.message
+        );
+    }
+}
 
 
 /* =========================================================
@@ -1607,6 +1711,32 @@ const aiSelect =
 
 const micButton =
     document.getElementById("micButton");
+
+
+const jarvisVoiceTest =
+    document.getElementById(
+        "jarvisVoiceTest"
+    );
+
+
+/* =========================================================
+   JARVIS VOICE TEST BUTTON
+========================================================= */
+
+if (jarvisVoiceTest) {
+
+    jarvisVoiceTest.addEventListener(
+        "click",
+        () => {
+
+            speakJarvis(
+                "Yes, Vijay. I am online."
+            );
+
+        }
+    );
+
+}
 
 
 /* =========================================================
