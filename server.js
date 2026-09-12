@@ -1,279 +1,3400 @@
-require("dotenv").config();
+<!DOCTYPE html>
+<html lang="en">
 
-const express = require("express");
-const path = require("path");
-const { GoogleGenAI } = require("@google/genai");
+<head>
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+<link rel="manifest" href="/manifest.json">
+<meta charset="UTF-8">
 
-/* =========================================
-   MIDDLEWARE
-========================================= */
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+<title>Vijay's Chatbot</title>
 
+<style>
 
-/* =========================================
-   CHECK API KEYS & STARTUP LOGS
-========================================= */
-
-console.log("");
-console.log("=================================");
-console.log("        VIJAY'S JARVIS CHATBOT");
-console.log("=================================");
-
-console.log(
-    "Gemini API:",
-    process.env.GEMINI_API_KEY ? "✅ Loaded" : "❌ Missing"
-);
-
-console.log(
-    "Groq API:",
-    process.env.GROQ_API_KEY ? "✅ Loaded" : "❌ Missing"
-);
-
-console.log(
-    "OpenRouter API:",
-    process.env.OPENROUTER_API_KEY ? "✅ Loaded" : "❌ Missing"
-);
-
-console.log("=================================");
-console.log("");
-
-
-/* =========================================
-   SDK INITIALIZATION
-========================================= */
-
-const gemini = process.env.GEMINI_API_KEY
-    ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY })
-    : null;
-
-const SYSTEM_PROMPT = 
-    "You are JARVIS, an extraordinarily intelligent, polite, concise, and helpful AI assistant. " +
-    "Address the user as Vijay when appropriate. Keep responses succinct, sharp, and natural for " +
-    "voice and text output.";
-
-
-/* =========================================
-   SSML FORMATTER (For Alexa Echo Dot)
-========================================= */
-
-function formatJarvisSSML(text) {
-    if (!text) return `<speak><voice name="Brian"><prosody pitch="-28%" rate="88%">Standing by, Vijay.</prosody></voice></speak>`;
-
-    const cleanText = String(text)
-        .replace(/[*_#`~]/g, "")         
-        .replace(/&/g, "and")            
-        .replace(/</g, "")               
-        .replace(/>/g, "")               
-        .replace(/"/g, "")               
-        .replace(/\n+/g, " ")            
-        .trim();
-
-    return `<speak><voice name="Brian"><prosody pitch="-28%" rate="88%">${cleanText}</prosody></voice></speak>`;
+* {
+    box-sizing: border-box;
 }
 
-
-/* =========================================
-   AI FUNCTIONS
-========================================= */
-
-async function askGemini(message) {
-    if (!gemini) throw new Error("GEMINI_API_KEY is missing from .env");
-
-    const response = await gemini.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: `${SYSTEM_PROMPT}\n\nUser: ${message}`
-    });
-
-    return response.text || "Gemini returned no response.";
+:root {
+    --bg: #ffffff;
+    --sidebar: #f7f7f8;
+    --border: #e5e7eb;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --user: #2563eb;
+    --card-bg: #ffffff;
+    --input-bg: #ffffff;
+    --hover-bg: #f0f1f3;
 }
 
-async function askGroq(message) {
-    if (!process.env.GROQ_API_KEY) throw new Error("GROQ_API_KEY is missing from .env");
+/* =========================================================
+   DARK MODE VARIABLES
+========================================================= */
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-            model: "llama-3.3-70b-versatile",
-            messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: message }
-            ],
-            temperature: 0.7
-        })
-    });
+body.dark-mode {
+    --bg: #121212;
+    --sidebar: #1e1e1e;
+    --border: #2d2d2d;
+    --text: #f3f4f6;
+    --muted: #9ca3af;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --user: #2563eb;
+    --card-bg: #1e1e1e;
+    --input-bg: #2a2a2a;
+    --hover-bg: #2a2a2a;
+}
 
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.error?.message || "Groq API request failed");
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
+
+    color: var(--text);
+    background: var(--bg);
+}
+
+body {
+    display: flex;
+    overflow: hidden;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.sidebar {
+    width: 270px;
+    height: 100vh;
+
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 14px;
+
+    flex-shrink: 0;
+    z-index: 100;
+    transition: transform 0.3s ease;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding:
+        8px
+        8px
+        18px;
+}
+
+.brand-icon {
+    width: 34px;
+    height: 34px;
+
+    border-radius: 10px;
+
+    background: var(--accent);
+    color: white;
+
+    display: grid;
+    place-items: center;
+
+    font-weight: 700;
+}
+
+.brand-name {
+    font-size: 17px;
+    font-weight: 650;
+}
+
+.new-chat {
+    width: 100%;
+
+    border: 1px solid var(--border);
+
+    background: var(--card-bg);
+    color: var(--text);
+
+    border-radius: 9px;
+
+    padding: 11px 13px;
+
+    font-size: 14px;
+
+    cursor: pointer;
+
+    text-align: left;
+}
+
+.new-chat:hover {
+    background: var(--hover-bg);
+}
+
+.search {
+    margin: 14px 0;
+}
+
+.search input {
+    width: 100%;
+
+    border: 1px solid var(--border);
+
+    background: var(--input-bg);
+    color: var(--text);
+
+    border-radius: 9px;
+
+    outline: none;
+
+    padding: 9px 10px;
+
+    font-size: 13px;
+}
+
+.section-title {
+    font-size: 11px;
+
+    font-weight: 650;
+
+    color: var(--muted);
+
+    text-transform: uppercase;
+
+    letter-spacing: .06em;
+
+    padding:
+        7px
+        8px;
+}
+
+.history {
+    overflow-y: auto;
+}
+
+.history-item {
+    padding: 9px 10px;
+
+    border-radius: 8px;
+
+    color: var(--muted);
+
+    font-size: 13px;
+
+    cursor: pointer;
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+}
+
+.history-item:hover,
+.history-item.active {
+    background: var(--hover-bg);
+    color: var(--text);
+}
+
+.sidebar-bottom {
+    margin-top: auto;
+
+    border-top:
+        1px solid
+        var(--border);
+
+    padding-top: 12px;
+
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 7px;
+}
+
+.avatar {
+    width: 34px;
+    height: 34px;
+
+    border-radius: 50%;
+
+    background: #dbeafe;
+    color: var(--accent);
+
+    display: grid;
+    place-items: center;
+
+    font-weight: 700;
+}
+
+.profile-name {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.profile-status {
+    font-size: 11px;
+
+    color: var(--muted);
+
+    margin-top: 2px;
+}
+
+/* Overlay for Mobile Sidebar */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 90;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* =========================================================
+   THEME TOGGLE BUTTON
+========================================================= */
+
+.theme-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 9px 12px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--card-bg);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.theme-toggle-btn:hover {
+    background: var(--hover-bg);
+}
+
+.topbar-theme-btn {
+    margin-left: auto;
+    width: auto;
+    padding: 6px 12px;
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.main {
+    flex: 1;
+
+    min-width: 0;
+
+    height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+}
+
+.topbar {
+    height: 58px;
+
+    border-bottom:
+        1px solid
+        var(--border);
+
+    display: flex;
+    align-items: center;
+
+    padding: 0 16px;
+    gap: 12px;
+}
+
+.menu-toggle-btn {
+    display: none;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: var(--text);
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.menu-toggle-btn:hover {
+    background: var(--hover-bg);
+}
+
+.top-title {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.top-subtitle {
+    color: var(--muted);
+
+    font-size: 11px;
+
+    margin-top: 2px;
+}
+
+/* =========================================================
+   CHAT
+========================================================= */
+
+#chat {
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding:
+        32px
+        20px
+        150px;
+}
+
+.chat-inner {
+    width: 100%;
+
+    max-width: 850px;
+
+    margin: 0 auto;
+}
+
+/* =========================================================
+   WELCOME
+========================================================= */
+
+.welcome {
+    max-width: 700px;
+
+    margin:
+        9vh
+        auto
+        0;
+
+    text-align: center;
+}
+
+.welcome-icon {
+    width: 58px;
+    height: 58px;
+
+    margin:
+        0
+        auto
+        18px;
+
+    border-radius: 17px;
+
+    background: #eff6ff;
+    color: var(--accent);
+
+    display: grid;
+    place-items: center;
+
+    font-size: 27px;
+}
+
+body.dark-mode .welcome-icon {
+    background: #1e293b;
+}
+
+.welcome h1 {
+    margin: 0;
+
+    font-size: 30px;
+
+    font-weight: 650;
+}
+
+.welcome p {
+    margin:
+        10px
+        auto
+        28px;
+
+    color: var(--muted);
+
+    font-size: 15px;
+}
+
+.suggestions {
+    display: grid;
+
+    grid-template-columns:
+        repeat(2, 1fr);
+
+    gap: 10px;
+
+    text-align: left;
+}
+
+.suggestion {
+    border:
+        1px solid
+        var(--border);
+
+    background: var(--card-bg);
+    color: var(--text);
+
+    border-radius: 12px;
+
+    padding: 15px;
+
+    cursor: pointer;
+
+    transition: .15s;
+}
+
+.suggestion:hover {
+    border-color: var(--accent);
+
+    background: var(--hover-bg);
+}
+
+.suggestion-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.suggestion-text {
+    margin-top: 4px;
+
+    color: var(--muted);
+
+    font-size: 12px;
+}
+
+/* =========================================================
+   MESSAGES
+========================================================= */
+
+.message-row {
+    display: flex;
+
+    gap: 12px;
+
+    margin-bottom: 24px;
+
+    max-width: 850px;
+}
+
+.message-row.user {
+    justify-content: flex-end;
+}
+
+.message-avatar {
+    width: 32px;
+    height: 32px;
+
+    border-radius: 50%;
+
+    flex:
+        0 0
+        32px;
+
+    display: grid;
+    place-items: center;
+
+    font-size: 13px;
+
+    font-weight: 700;
+}
+
+.bot-avatar {
+    background: #eff6ff;
+    color: var(--accent);
+}
+
+body.dark-mode .bot-avatar {
+    background: #1e293b;
+}
+
+.user-avatar {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+body.dark-mode .user-avatar {
+    background: #374151;
+    color: #f3f4f6;
+}
+
+.message-content {
+    max-width: 78%;
+}
+
+.message-name {
+    font-size: 11px;
+
+    color: var(--muted);
+
+    margin-bottom: 5px;
+}
+
+.message-text {
+    font-size: 14px;
+
+    line-height: 1.65;
+
+    white-space: pre-wrap;
+
+    overflow-wrap: anywhere;
+}
+
+.user .message-text {
+    background: var(--user);
+
+    color: white;
+
+    border-radius:
+        16px
+        16px
+        4px
+        16px;
+
+    padding:
+        10px
+        14px;
+}
+
+/* =========================================================
+   TYPING
+========================================================= */
+
+.typing {
+    display: inline-flex;
+
+    gap: 4px;
+
+    padding: 8px 0;
+}
+
+.typing span {
+    width: 6px;
+    height: 6px;
+
+    background: #9ca3af;
+
+    border-radius: 50%;
+
+    animation:
+        bounce
+        1.1s
+        infinite;
+}
+
+.typing span:nth-child(2) {
+    animation-delay: .15s;
+}
+
+.typing span:nth-child(3) {
+    animation-delay: .3s;
+}
+
+@keyframes bounce {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+        opacity: .45;
     }
 
-    return data.choices?.[0]?.message?.content || "Groq returned no response.";
+    30% {
+        transform: translateY(-4px);
+        opacity: 1;
+    }
 }
 
-async function askOpenRouter(message) {
-    if (!process.env.OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is missing from .env");
+/* =========================================================
+   COMPOSER
+========================================================= */
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "http://localhost:3000",
-            "X-Title": "Vijay's Jarvis Chatbot"
-        },
-        body: JSON.stringify({
-            model: "meta-llama/llama-3.3-70b-instruct",
-            messages: [
-                { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: message }
-            ]
-        })
-    });
+.composer-area {
+    position: fixed;
 
-    const data = await response.json();
-    if (!response.ok) {
-        throw new Error(data.error?.message || "OpenRouter API request failed");
+    left: 270px;
+    right: 0;
+    bottom: 0;
+
+    background:
+        linear-gradient(
+            transparent,
+            var(--bg) 24%
+        );
+
+    padding:
+        25px
+        20px
+        15px;
+
+    z-index: 5;
+}
+
+.composer-wrap {
+    max-width: 850px;
+
+    margin: auto;
+}
+
+.composer {
+    display: flex;
+
+    align-items: flex-end;
+
+    gap: 7px;
+
+    border:
+        1px solid
+        var(--border);
+
+    background: var(--card-bg);
+
+    border-radius: 15px;
+
+    padding: 8px;
+
+    box-shadow:
+        0
+        4px
+        18px
+        rgba(0,0,0,.1);
+}
+
+/* =========================================================
+   AI DROPDOWN
+========================================================= */
+
+.ai-selector {
+    flex: 0 0 auto;
+}
+
+#aiSelect {
+    appearance: auto;
+
+    border:
+        1px solid
+        var(--border);
+
+    background: var(--input-bg);
+
+    color: var(--text);
+
+    border-radius: 8px;
+
+    padding:
+        8px
+        9px;
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    cursor: pointer;
+
+    outline: none;
+
+    height: 38px;
+
+    max-width: 105px;
+}
+
+#aiSelect:hover {
+    background: var(--hover-bg);
+}
+
+/* =========================================================
+   MESSAGE INPUT
+========================================================= */
+
+#message {
+    flex: 1;
+
+    min-width: 0;
+
+    height: 38px;
+
+    max-height: 130px;
+
+    resize: none;
+
+    border: 0;
+
+    outline: none;
+
+    font: inherit;
+
+    font-size: 14px;
+
+    line-height: 1.45;
+
+    padding:
+        9px
+        3px;
+
+    background: transparent;
+    color: var(--text);
+}
+
+#message::placeholder {
+    color: var(--muted);
+}
+
+/* =========================================================
+   NORMAL BUTTONS
+========================================================= */
+
+.composer-button {
+    width: 38px;
+    height: 38px;
+
+    flex:
+        0 0
+        38px;
+
+    border: 0;
+
+    background: transparent;
+
+    color: var(--muted);
+
+    border-radius: 9px;
+
+    cursor: pointer;
+
+    font-size: 18px;
+}
+
+.composer-button:hover {
+    background: var(--hover-bg);
+}
+
+/* =========================================================
+   HARDCORE MICROPHONE
+========================================================= */
+
+.mic-button {
+    position: relative;
+
+    width: 38px;
+    height: 38px;
+
+    flex:
+        0 0
+        38px;
+
+    overflow: visible;
+
+    transition:
+        transform .2s ease,
+        background .2s ease,
+        box-shadow .3s ease;
+}
+
+.mic-button .mic-icon {
+    position: relative;
+
+    z-index: 10;
+
+    display: block;
+
+    transition:
+        transform .2s ease;
+}
+
+.mic-button.listening {
+    background: #ef4444 !important;
+
+    color: white !important;
+
+    transform: scale(1.12);
+
+    box-shadow:
+        0 0 8px
+        rgba(239,68,68,.9),
+
+        0 0 20px
+        rgba(239,68,68,.65),
+
+        0 0 45px
+        rgba(239,68,68,.35);
+}
+
+.mic-button.listening .mic-icon {
+    transform: scale(1.15);
+}
+
+/* =========================================================
+   EXPANDING MIC RINGS
+========================================================= */
+
+.mic-pulse {
+    position: absolute;
+
+    inset: 0;
+
+    border-radius: 50%;
+
+    border:
+        2px solid
+        #ef4444;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+.mic-button.listening .mic-pulse {
+    animation:
+        micPulse
+        1.8s
+        infinite;
+}
+
+.mic-button.listening .pulse-2 {
+    animation-delay: .6s;
+}
+
+.mic-button.listening .pulse-3 {
+    animation-delay: 1.2s;
+}
+
+@keyframes micPulse {
+
+    0% {
+        transform: scale(.9);
+
+        opacity: .9;
     }
 
-    return data.choices?.[0]?.message?.content || "OpenRouter returned no response.";
+    100% {
+        transform: scale(2.5);
+
+        opacity: 0;
+    }
 }
 
+/* =========================================================
+   VOICE EQUALIZER
+========================================================= */
 
-/* =========================================
-   WEB CHAT ROUTE (/chat)
-========================================= */
+.voice-bars {
+    position: absolute;
 
-app.post("/chat", async (req, res) => {
+    left: 50%;
+
+    bottom: -9px;
+
+    transform:
+        translateX(-50%);
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 2px;
+
+    height: 12px;
+
+    opacity: 0;
+
+    pointer-events: none;
+}
+
+.voice-bars i {
+    display: block;
+
+    width: 2px;
+
+    height: 4px;
+
+    border-radius: 3px;
+
+    background: #ef4444;
+}
+
+.mic-button.listening .voice-bars {
+    opacity: 1;
+}
+
+.mic-button.listening
+.voice-bars i {
+    animation:
+        voiceBar
+        .55s
+        infinite
+        alternate
+        ease-in-out;
+}
+
+.voice-bars i:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.voice-bars i:nth-child(2) {
+    animation-delay: .1s;
+}
+
+.voice-bars i:nth-child(3) {
+    animation-delay: .2s;
+}
+
+.voice-bars i:nth-child(4) {
+    animation-delay: .05s;
+}
+
+.voice-bars i:nth-child(5) {
+    animation-delay: .25s;
+}
+
+.voice-bars i:nth-child(6) {
+    animation-delay: .15s;
+}
+
+.voice-bars i:nth-child(7) {
+    animation-delay: .3s;
+}
+
+@keyframes voiceBar {
+
+    from {
+        height: 3px;
+    }
+
+    to {
+        height: 13px;
+    }
+}
+
+/* =========================================================
+   LISTENING LABEL
+========================================================= */
+
+.mic-button.listening::after {
+
+    content: "LISTENING";
+
+    position: absolute;
+
+    top: -29px;
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    font-size: 8px;
+
+    font-weight: 800;
+
+    letter-spacing: 1px;
+
+    color: #ef4444;
+
+    white-space: nowrap;
+
+    animation:
+        listeningText
+        1s
+        infinite
+        alternate;
+}
+
+@keyframes listeningText {
+
+    from {
+        opacity: .4;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* =========================================================
+   SEND
+========================================================= */
+
+#send {
+    width: 38px;
+    height: 38px;
+
+    border: 0;
+
+    border-radius: 10px;
+
+    background: var(--accent);
+
+    color: white;
+
+    cursor: pointer;
+
+    font-size: 18px;
+}
+
+#send:hover {
+    background:
+        var(--accent-hover);
+}
+
+#send:disabled {
+    opacity: .45;
+
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   FOOTER
+========================================================= */
+
+.footer-note {
+    text-align: center;
+
+    color: var(--muted);
+
+    font-size: 10px;
+
+    margin-top: 7px;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+@media (max-width: 750px) {
+
+    .menu-toggle-btn {
+        display: block;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        transform: translateX(-100%);
+        box-shadow: 2px 0 12px rgba(0,0,0,0.2);
+    }
+
+    .sidebar.open {
+        transform: translateX(0);
+    }
+
+    .composer-area {
+        left: 0;
+
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    #chat {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    .suggestions {
+        grid-template-columns: 1fr;
+    }
+
+    .welcome h1 {
+        font-size: 25px;
+    }
+
+    .message-content {
+        max-width: 85%;
+    }
+
+    #aiSelect {
+        max-width: 90px;
+    }
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<!-- Sidebar Overlay for Mobile -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<!-- =======================================================
+     SIDEBAR
+======================================================== -->
+
+<aside class="sidebar" id="sidebar">
+
+    <div class="brand">
+
+        <div class="brand-icon">
+            V
+        </div>
+
+        <div class="brand-name">
+            Vijay's Chatbot
+        </div>
+
+    </div>
+
+
+    <button
+        class="new-chat"
+        onclick="newChat()"
+    >
+        ＋ &nbsp; New chat
+    </button>
+
+
+    <div class="search">
+
+        <input
+            id="searchInput"
+            type="text"
+            placeholder="Search chats..."
+        >
+
+    </div>
+
+
+    <div class="section-title">
+        Recent chats
+    </div>
+
+
+    <div
+        class="history"
+        id="history"
+    >
+
+        <div
+            class="history-item active"
+            onclick="closeSidebarMobile()"
+        >
+            New conversation
+        </div>
+
+    </div>
+
+
+    <div class="sidebar-bottom">
+
+        <button class="theme-toggle-btn" onclick="toggleTheme()">
+            <span class="theme-label">Theme</span>
+            <span class="theme-icon">🌙</span>
+        </button>
+
+        <div class="profile">
+
+            <div class="avatar">
+                V
+            </div>
+
+            <div>
+
+                <div class="profile-name">
+                    Vijay
+                </div>
+
+                <div class="profile-status">
+                    Chatbot ready
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</aside>
+
+
+<!-- =======================================================
+     MAIN
+======================================================== -->
+
+<main class="main">
+
+    <header class="topbar">
+
+        <button class="menu-toggle-btn" onclick="toggleSidebar()" aria-label="Toggle Menu">
+            ☰
+        </button>
+
+        <div>
+
+            <div class="top-title">
+                Vijay's Chatbot
+            </div>
+
+            <div class="top-subtitle">
+                Multi-AI assistant
+            </div>
+
+        </div>
+
+        <button class="theme-toggle-btn topbar-theme-btn" onclick="toggleTheme()">
+            <span class="theme-icon">🌙</span>
+        </button>
+
+    </header>
+
+
+    <!-- ===================================================
+         CHAT
+    ==================================================== -->
+
+    <div id="chat">
+
+        <div
+            class="chat-inner"
+            id="chatInner"
+        >
+
+            <div
+                class="welcome"
+                id="welcome"
+            >
+
+                <div class="welcome-icon">
+                    🤖
+                </div>
+
+                <h1>
+                    Hi, I'm Vijay's Chatbot
+                </h1>
+
+                <p>
+                    Choose an AI below and start chatting.
+                </p>
+
+
+                <div class="suggestions">
+
+                    <button
+                        class="suggestion"
+                        onclick="useSuggestion(
+                            'Explain something to me'
+                        )"
+                    >
+
+                        <div class="suggestion-title">
+                            💡 Ask me anything
+                        </div>
+
+                        <div class="suggestion-text">
+                            Get a simple answer to your question.
+                        </div>
+
+                    </button>
+
+
+                    <button
+                        class="suggestion"
+                        onclick="useSuggestion(
+                            'Help me with coding'
+                        )"
+                    >
+
+                        <div class="suggestion-title">
+                            💻 Help with coding
+                        </div>
+
+                        <div class="suggestion-text">
+                            Debug, explain, or build code with me.
+                        </div>
+
+                    </button>
+
+
+                    <button
+                        class="suggestion"
+                        onclick="useSuggestion(
+                            'Explain this topic in simple words'
+                        )"
+                    >
+
+                        <div class="suggestion-title">
+                            📚 Explain something
+                        </div>
+
+                        <div class="suggestion-text">
+                            Make complicated topics easy.
+                        </div>
+
+                    </button>
+
+
+                    <button
+                        class="suggestion"
+                        onclick="useSuggestion(
+                            'Help me write something'
+                        )"
+                    >
+
+                        <div class="suggestion-title">
+                            ✍️ Help me write
+                        </div>
+
+                        <div class="suggestion-text">
+                            Create or improve your writing.
+                        </div>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================
+         COMPOSER
+    ==================================================== -->
+
+    <div class="composer-area">
+
+        <div class="composer-wrap">
+
+            <form
+                class="composer"
+                id="chat-form"
+            >
+
+                <!-- ATTACH -->
+
+                <button
+                    class="composer-button"
+                    type="button"
+                    title="Attach file"
+                >
+                    ＋
+                </button>
+
+
+                <!-- AI SELECTOR -->
+
+                <div class="ai-selector">
+
+                    <select id="aiSelect">
+
+                        <option value="gemini">
+                            Gemini
+                        </option>
+
+                        <option value="groq">
+                            Groq
+                        </option>
+
+                        <option value="openrouter">
+                            OpenRouter
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+                <!-- MESSAGE -->
+
+                <textarea
+                    id="message"
+                    placeholder="Message Gemini..."
+                    rows="1"
+                    autocomplete="off"
+                ></textarea>
+
+
+                <!-- =================================================
+                     HARDCORE MIC BUTTON
+                ================================================== -->
+
+                <button
+                    id="micButton"
+                    class="composer-button mic-button"
+                    type="button"
+                    title="Voice input"
+                    aria-label="Voice input"
+                >
+
+                    <span class="mic-icon">
+                        🎙️
+                    </span>
+
+                    <span
+                        class="mic-pulse pulse-1"
+                    ></span>
+
+                    <span
+                        class="mic-pulse pulse-2"
+                    ></span>
+
+                    <span
+                        class="mic-pulse pulse-3"
+                    ></span>
+
+
+                    <span class="voice-bars">
+
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+                        <i></i>
+
+                    </span>
+
+                </button>
+
+
+                <!-- JARVIS VOICE TEST -->
+
+                <button
+                    id="jarvisVoiceTest"
+                    class="composer-button"
+                    type="button"
+                    title="Test JARVIS voice"
+                    aria-label="Test JARVIS voice"
+                >
+                    🔊
+                </button>
+
+
+                <!-- SEND -->
+
+                <button
+                    id="send"
+                    type="submit"
+                    title="Send"
+                >
+                    ↑
+                </button>
+
+            </form>
+
+
+            <div class="footer-note">
+                AI responses may contain mistakes. Check important information.
+            </div>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+<script>
+
+/* =========================================================
+   CONFIG
+========================================================= */
+
+const API_URL =
+    "https://vijays-chatbot.onrender.com";
+
+
+/* =========================================================
+   JARVIS ELEVENLABS VOICE
+========================================================= */
+
+async function speakJarvis(text) {
+
+    if (!text || !text.trim()) {
+        return;
+    }
+
     try {
-        const { message, provider = "gemini" } = req.body;
 
-        console.log(`\n📩 /chat request [${provider}]: ${message}`);
+        console.log("🔊 JARVIS voice:", text);
 
-        if (!message) {
-            return res.status(400).json({ error: "Message is required." });
+        const response =
+            await fetch(
+                `${API_URL}/speak`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            text: text
+                        })
+                }
+            );
+
+
+        if (!response.ok) {
+
+            let errorMessage =
+                "Voice request failed.";
+
+            try {
+
+                const errorData =
+                    await response.json();
+
+                errorMessage =
+                    errorData.error ||
+                    errorMessage;
+
+            } catch {}
+
+            throw new Error(
+                errorMessage
+            );
         }
 
-        let reply = "";
-        if (provider === "groq") {
-            reply = await askGroq(message);
-        } else if (provider === "openrouter") {
-            reply = await askOpenRouter(message);
-        } else {
-            reply = await askGemini(message);
-        }
 
-        console.log(`✅ ${provider} responded successfully`);
-        return res.json({ reply, provider });
+        const audioBlob =
+            await response.blob();
 
-    } catch (error) {
-        console.error("\n❌ CHAT ERROR:", error.message);
-        return res.status(500).json({ error: error.message || "Something went wrong." });
+        const audioUrl =
+            URL.createObjectURL(
+                audioBlob
+            );
+
+        const audio =
+            new Audio(audioUrl);
+
+        audio.onended =
+            () => {
+                URL.revokeObjectURL(
+                    audioUrl
+                );
+            };
+
+        await audio.play();
+
     }
-});
+    catch (error) {
+
+        console.error(
+            "❌ JARVIS voice error:",
+            error
+        );
+
+        alert(
+            "JARVIS voice error:\n" +
+            error.message
+        );
+    }
+}
 
 
-/* =========================================
-   ALEXA SKILL ROUTE (/alexa)
-========================================= */
+/* =========================================================
+   MOBILE SIDEBAR TOGGLE
+========================================================= */
 
-app.post("/alexa", async (req, res) => {
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+    
+    sidebar.classList.toggle("open");
+    overlay.classList.toggle("active");
+}
+
+function closeSidebarMobile() {
+    if (window.innerWidth <= 750) {
+        const sidebar = document.getElementById("sidebar");
+        const overlay = document.getElementById("sidebarOverlay");
+        
+        sidebar.classList.remove("open");
+        overlay.classList.remove("active");
+    }
+}
+
+
+/* =========================================================
+   DARK MODE SYSTEM
+========================================================= */
+
+function initTheme() {
+    const savedTheme = localStorage.getItem("theme");
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+    if (savedTheme === "dark" || (!savedTheme && systemPrefersDark)) {
+        applyTheme("dark");
+    } else {
+        applyTheme("light");
+    }
+}
+
+function toggleTheme() {
+    const isDark = document.body.classList.contains("dark-mode");
+    applyTheme(isDark ? "light" : "dark");
+}
+
+function applyTheme(theme) {
+    const icons = document.querySelectorAll(".theme-icon");
+
+    if (theme === "dark") {
+        document.body.classList.add("dark-mode");
+        localStorage.setItem("theme", "dark");
+        icons.forEach(icon => icon.textContent = "☀️");
+    } else {
+        document.body.classList.remove("dark-mode");
+        localStorage.setItem("theme", "light");
+        icons.forEach(icon => icon.textContent = "🌙");
+    }
+}
+
+// Initialize theme on load
+initTheme();
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const form =
+    document.getElementById("chat-form");
+
+const input =
+    document.getElementById("message");
+
+const chat =
+    document.getElementById("chat");
+
+const chatInner =
+    document.getElementById("chatInner");
+
+const sendButton =
+    document.getElementById("send");
+
+const historyElement =
+    document.getElementById("history");
+
+const searchInput =
+    document.getElementById("searchInput");
+
+const aiSelect =
+    document.getElementById("aiSelect");
+
+const micButton =
+    document.getElementById("micButton");
+
+
+const jarvisVoiceTest =
+    document.getElementById(
+        "jarvisVoiceTest"
+    );
+
+
+/* =========================================================
+   JARVIS VOICE TEST BUTTON
+========================================================= */
+
+if (jarvisVoiceTest) {
+
+    jarvisVoiceTest.addEventListener(
+        "click",
+        () => {
+
+            speakJarvis(
+                "Yes, Vijay. I am online."
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   AI NAMES
+========================================================= */
+
+const aiNames = {
+
+    gemini:
+        "Gemini",
+
+    groq:
+        "Groq",
+
+    openrouter:
+        "OpenRouter"
+
+};
+
+
+/* =========================================================
+   SHARED CONVERSATION HISTORY
+========================================================= */
+
+let conversationHistory = [];
+
+
+/* =========================================================
+   ATTACHMENTS
+========================================================= */
+
+let attachments = [];
+
+
+/* =========================================================
+   FILE INPUT
+========================================================= */
+
+const fileInput =
+    document.createElement("input");
+
+fileInput.type = "file";
+
+fileInput.accept =
+    "image/*,video/*,.pdf,.txt,.doc,.docx,.csv,.json,.md";
+
+fileInput.multiple = true;
+
+fileInput.style.display =
+    "none";
+
+document.body.appendChild(
+    fileInput
+);
+
+
+/* =========================================================
+   ATTACH BUTTON
+========================================================= */
+
+const attachButton =
+    document.querySelector(
+        '.composer-button[title="Attach file"]'
+    );
+
+
+if (attachButton) {
+
+    attachButton.addEventListener(
+        "click",
+        () => {
+
+            fileInput.click();
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   FILE SELECTION
+========================================================= */
+
+fileInput.addEventListener(
+    "change",
+    async function() {
+
+        const files =
+            Array.from(
+                fileInput.files
+            );
+
+
+        for (
+            const file
+            of files
+        ) {
+
+            await uploadFile(file);
+
+        }
+
+
+        fileInput.value =
+            "";
+
+    }
+);
+
+
+/* =========================================================
+   UPLOAD FILE
+========================================================= */
+
+async function uploadFile(file) {
+
     try {
-        const request = req.body.request;
-        if (!request) return res.status(400).json({ error: "Invalid Alexa payload" });
 
-        const requestType = request.type;
-        console.log(`\n🗣️ Alexa request received: ${requestType}`);
+        showUploadMessage(
+            `Uploading ${file.name}...`
+        );
 
-        if (requestType === "LaunchRequest") {
-            const welcomeMsg = "Online and operational, Vijay. How can I assist you today?";
-            return res.json({
-                version: "1.0",
-                response: {
-                    outputSpeech: { type: "SSML", ssml: formatJarvisSSML(welcomeMsg) },
-                    shouldEndSession: false
+
+        const formData =
+            new FormData();
+
+
+        formData.append(
+            "file",
+            file
+        );
+
+
+        const response =
+            await fetch(
+                `${API_URL}/upload`,
+                {
+
+                    method: "POST",
+
+                    body: formData
+
                 }
-            });
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.error ||
+                "Upload failed."
+            );
+
         }
 
-        if (requestType === "IntentRequest") {
-            const intentName = request.intent?.name;
 
-            if (intentName === "AskJarvisIntent" || intentName === "AMAZON.FallbackIntent") {
-                let userQuery = request.intent?.slots?.query?.value || "Hello";
-                let selectedProvider = "gemini";
-                const lowerQuery = userQuery.toLowerCase();
+        attachments.push({
 
-                if (lowerQuery.includes("groq")) {
-                    selectedProvider = "groq";
-                    userQuery = userQuery.replace(/ask groq|use groq|groq/gi, "").trim();
-                } else if (lowerQuery.includes("openrouter")) {
-                    selectedProvider = "openrouter";
-                    userQuery = userQuery.replace(/ask openrouter|use openrouter|openrouter/gi, "").trim();
-                } else if (lowerQuery.includes("gemini")) {
-                    selectedProvider = "gemini";
-                    userQuery = userQuery.replace(/ask gemini|use gemini|gemini/gi, "").trim();
-                }
+            name:
+                data.name,
 
-                if (!userQuery) userQuery = "Hello";
+            mimeType:
+                data.mimeType,
 
-                let aiReply = "";
-                if (selectedProvider === "groq") aiReply = await askGroq(userQuery);
-                else if (selectedProvider === "openrouter") aiReply = await askOpenRouter(userQuery);
-                else aiReply = await askGemini(userQuery);
+            size:
+                data.size,
 
-                return res.json({
-                    version: "1.0",
-                    response: {
-                        outputSpeech: { type: "SSML", ssml: formatJarvisSSML(aiReply) },
-                        shouldEndSession: false
-                    }
-                });
-            }
+            fileUri:
+                data.fileUri,
 
-            if (intentName === "AMAZON.StopIntent" || intentName === "AMAZON.CancelIntent") {
-                return res.json({
-                    version: "1.0",
-                    response: {
-                        outputSpeech: { type: "SSML", ssml: formatJarvisSSML("Powering down systems. Goodbye, Vijay.") },
-                        shouldEndSession: true
-                    }
-                });
-            }
-        }
+            fileName:
+                data.fileName
 
-        return res.json({ version: "1.0", response: { shouldEndSession: true } });
-
-    } catch (error) {
-        console.error("\n❌ ALEXA ERROR:", error.message);
-        return res.json({
-            version: "1.0",
-            response: {
-                outputSpeech: { type: "SSML", ssml: formatJarvisSSML("An unexpected failure occurred within my core systems, Vijay.") },
-                shouldEndSession: true
-            }
         });
+
+
+        showAttachmentPreview();
+
+
+        console.log(
+            "✅ Uploaded:",
+            data.name
+        );
+
     }
-});
+
+    catch (error) {
+
+        console.error(
+            "Upload error:",
+            error
+        );
 
 
-/* =========================================
-   START SERVER
-========================================= */
+        alert(
+            "Upload failed:\n" +
+            error.message
+        );
 
-app.listen(PORT, "0.0.0.0", () => {
-    console.log("");
-    console.log(`🌐 Server active at http://localhost:${PORT}`);
-    console.log("=================================");
-    console.log("🤖 Gemini + Groq + OpenRouter + Alexa");
-    console.log("=================================");
-    console.log("");
-});
+    }
+
+}
+
+
+/* =========================================================
+   UPLOAD STATUS
+========================================================= */
+
+function showUploadMessage(text) {
+
+    let status =
+        document.getElementById(
+            "upload-status"
+        );
+
+
+    if (!status) {
+
+        status =
+            document.createElement(
+                "div"
+            );
+
+        status.id =
+            "upload-status";
+
+        status.style.position =
+            "fixed";
+
+        status.style.bottom =
+            "95px";
+
+        status.style.left =
+            "50%";
+
+        status.style.transform =
+            "translateX(-50%)";
+
+        status.style.background =
+            "#111827";
+
+        status.style.color =
+            "white";
+
+        status.style.padding =
+            "8px 13px";
+
+        status.style.borderRadius =
+            "8px";
+
+        status.style.fontSize =
+            "12px";
+
+        status.style.zIndex =
+            "100";
+
+        document.body.appendChild(
+            status
+        );
+
+    }
+
+
+    status.textContent =
+        text;
+
+
+    clearTimeout(
+        status._timer
+    );
+
+
+    status._timer =
+        setTimeout(
+            () => {
+
+                status.remove();
+
+            },
+            2500
+        );
+
+}
+
+
+/* =========================================================
+   ATTACHMENT PREVIEW
+========================================================= */
+
+function showAttachmentPreview() {
+
+    let preview =
+        document.getElementById(
+            "attachment-preview"
+        );
+
+
+    if (!preview) {
+
+        preview =
+            document.createElement(
+                "div"
+            );
+
+        preview.id =
+            "attachment-preview";
+
+        preview.style.display =
+            "flex";
+
+        preview.style.flexWrap =
+            "wrap";
+
+        preview.style.gap =
+            "7px";
+
+        preview.style.marginBottom =
+            "8px";
+
+        preview.style.maxWidth =
+            "850px";
+
+        preview.style.marginLeft =
+            "auto";
+
+        preview.style.marginRight =
+            "auto";
+
+
+        const composerArea =
+            document.querySelector(
+                ".composer-area"
+            );
+
+
+        composerArea.insertBefore(
+            preview,
+            composerArea.firstElementChild
+        );
+
+    }
+
+
+    preview.innerHTML =
+        "";
+
+
+    attachments.forEach(
+        (file, index) => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+
+            item.style.display =
+                "flex";
+
+            item.style.alignItems =
+                "center";
+
+            item.style.gap =
+                "7px";
+
+            item.style.background =
+                "var(--card-bg)";
+
+            item.style.border =
+                "1px solid var(--border)";
+
+            item.style.borderRadius =
+                "9px";
+
+            item.style.padding =
+                "6px 9px";
+
+            item.style.fontSize =
+                "12px";
+
+
+            const icon =
+                getFileIcon(
+                    file.mimeType
+                );
+
+
+            item.innerHTML = `
+
+                <span>
+                    ${icon}
+                </span>
+
+                <span
+                    style="
+                        max-width:180px;
+                        overflow:hidden;
+                        text-overflow:ellipsis;
+                        white-space:nowrap;
+                    "
+                >
+                    ${escapeHtml(file.name)}
+                </span>
+
+                <button
+                    type="button"
+                    data-index="${index}"
+                    style="
+                        border:0;
+                        background:transparent;
+                        cursor:pointer;
+                        font-size:14px;
+                        color:var(--text);
+                    "
+                    title="Remove"
+                >
+                    ×
+                </button>
+
+            `;
+
+
+            item
+                .querySelector("button")
+                .addEventListener(
+                    "click",
+                    () => {
+
+                        attachments.splice(
+                            index,
+                            1
+                        );
+
+                        showAttachmentPreview();
+
+                    }
+                );
+
+
+            preview.appendChild(
+                item
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   FILE ICON
+========================================================= */
+
+function getFileIcon(mime) {
+
+    if (
+        mime &&
+        mime.startsWith("image/")
+    ) {
+
+        return "🖼️";
+
+    }
+
+
+    if (
+        mime &&
+        mime.startsWith("video/")
+    ) {
+
+        return "🎥";
+
+    }
+
+
+    if (
+        mime === "application/pdf"
+    ) {
+
+        return "📕";
+
+    }
+
+
+    if (
+        mime &&
+        mime.startsWith("audio/")
+    ) {
+
+        return "🎵";
+
+    }
+
+
+    return "📄";
+
+}
+
+
+/* =========================================================
+   ESCAPE HTML
+========================================================= */
+
+function escapeHtml(text) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        text;
+
+    return div.innerHTML;
+
+}
+
+
+/* =========================================================
+   AI SELECTOR
+========================================================= */
+
+aiSelect.addEventListener(
+    "change",
+    function() {
+
+        const selectedAI =
+            aiSelect.value;
+
+
+        input.placeholder =
+            "Message " +
+            aiNames[selectedAI] +
+            "...";
+
+
+        input.focus();
+
+    }
+);
+
+
+/* =========================================================
+   AUTO RESIZE
+========================================================= */
+
+function autoResize() {
+
+    input.style.height =
+        "38px";
+
+
+    input.style.height =
+        Math.min(
+            input.scrollHeight,
+            130
+        ) + "px";
+
+}
+
+
+input.addEventListener(
+    "input",
+    autoResize
+);
+
+
+/* =========================================================
+   ENTER TO SEND
+========================================================= */
+
+input.addEventListener(
+    "keydown",
+    function(event) {
+
+        if (
+            event.key === "Enter" &&
+            !event.shiftKey
+        ) {
+
+            event.preventDefault();
+
+            form.requestSubmit();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   SUGGESTIONS
+========================================================= */
+
+function useSuggestion(text) {
+
+    input.value =
+        text;
+
+    autoResize();
+
+    input.focus();
+
+}
+
+
+/* =========================================================
+   HARDCORE VOICE INPUT
+========================================================= */
+
+let recognition = null;
+
+let isListening =
+    false;
+
+
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+
+if (SpeechRecognition) {
+
+    recognition =
+        new SpeechRecognition();
+
+
+    /*
+       Don't keep listening forever.
+       One press = listen until speech ends.
+    */
+
+    recognition.continuous =
+        false;
+
+
+    /*
+       Show live words while speaking.
+    */
+
+    recognition.interimResults =
+        true;
+
+
+    /*
+       Indian English.
+    */
+
+    recognition.lang =
+        "en-IN";
+
+
+    /* =====================================================
+       START
+    ====================================================== */
+
+    recognition.onstart =
+        () => {
+
+            isListening =
+                true;
+
+
+            micButton.classList.add(
+                "listening"
+            );
+
+
+            micButton
+                .querySelector(
+                    ".mic-icon"
+                )
+                .textContent =
+                "🛑";
+
+
+            micButton.title =
+                "Stop listening";
+
+
+            micButton.setAttribute(
+                "aria-label",
+                "Stop listening"
+            );
+
+
+            console.log(
+                "🎤 Voice recognition started"
+            );
+
+        };
+
+
+    /* =====================================================
+       LIVE SPEECH
+    ====================================================== */
+
+    recognition.onresult =
+        (event) => {
+
+            let transcript =
+                "";
+
+
+            for (
+                let i =
+                    event.resultIndex;
+
+                i <
+                    event.results.length;
+
+                i++
+            ) {
+
+                transcript +=
+                    event.results[i][0]
+                        .transcript;
+
+            }
+
+
+            input.value =
+                transcript;
+
+
+            autoResize();
+
+        };
+
+
+    /* =====================================================
+       ERROR
+    ====================================================== */
+
+    recognition.onerror =
+        (event) => {
+
+            console.error(
+                "🎤 Voice error:",
+                event.error
+            );
+
+
+            stopVoice();
+
+
+            if (
+                event.error ===
+                "not-allowed"
+            ) {
+
+                alert(
+                    "Microphone permission was denied. Please allow microphone access."
+                );
+
+            }
+
+            else if (
+                event.error ===
+                "no-speech"
+            ) {
+
+                console.log(
+                    "🎤 No speech detected."
+                );
+
+            }
+
+        };
+
+
+    /* =====================================================
+       END
+    ====================================================== */
+
+    recognition.onend =
+        () => {
+
+            stopVoice();
+
+            console.log(
+                "🎤 Voice recognition ended"
+            );
+
+        };
+
+
+    /* =====================================================
+       STOP VOICE
+    ====================================================== */
+
+    function stopVoice() {
+
+        isListening =
+            false;
+
+
+        micButton.classList.remove(
+            "listening"
+        );
+
+
+        micButton
+            .querySelector(
+                ".mic-icon"
+            )
+            .textContent =
+            "🎙️";
+
+
+        micButton.title =
+            "Voice input";
+
+
+        micButton.setAttribute(
+            "aria-label",
+            "Voice input"
+        );
+
+    }
+
+
+    /* =====================================================
+       MIC CLICK
+    ====================================================== */
+
+    micButton.addEventListener(
+        "click",
+        () => {
+
+            /*
+               If already listening,
+               stop it.
+            */
+
+            if (isListening) {
+
+                recognition.stop();
+
+                return;
+
+            }
+
+
+            /*
+               Start microphone.
+            */
+
+            try {
+
+                recognition.start();
+
+            }
+
+            catch (error) {
+
+                console.error(
+                    "🎤 Could not start microphone:",
+                    error
+                );
+
+            }
+
+        }
+    );
+
+}
+
+else {
+
+    /*
+       Browser doesn't support
+       SpeechRecognition.
+    */
+
+    micButton.addEventListener(
+        "click",
+        () => {
+
+            alert(
+                "Voice input is not supported on this browser."
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   NEW CHAT
+========================================================= */
+
+function newChat() {
+
+    closeSidebarMobile();
+
+    /*
+       Only New Chat clears
+       the shared conversation.
+    */
+
+    conversationHistory =
+        [];
+
+    attachments =
+        [];
+
+
+    const preview =
+        document.getElementById(
+            "attachment-preview"
+        );
+
+
+    if (preview) {
+
+        preview.remove();
+
+    }
+
+
+    chatInner.innerHTML = `
+
+        <div
+            class="welcome"
+            id="welcome"
+        >
+
+            <div class="welcome-icon">
+                ✦
+            </div>
+
+            <h1>
+                Hi, I'm Vijay's Chatbot
+            </h1>
+
+            <p>
+                Choose an AI below and start chatting.
+            </p>
+
+            <div class="suggestions">
+
+                <button
+                    class="suggestion"
+                    onclick="useSuggestion(
+                        'Explain something to me'
+                    )"
+                >
+
+                    <div class="suggestion-title">
+                        💡 Ask me anything
+                    </div>
+
+                    <div class="suggestion-text">
+                        Get a simple answer to your question.
+                    </div>
+
+                </button>
+
+
+                <button
+                    class="suggestion"
+                    onclick="useSuggestion(
+                        'Help me with coding'
+                    )"
+                >
+
+                    <div class="suggestion-title">
+                        💻 Help with coding
+                    </div>
+
+                    <div class="suggestion-text">
+                        Debug, explain, or build code with me.
+                    </div>
+
+                </button>
+
+
+                <button
+                    class="suggestion"
+                    onclick="useSuggestion(
+                        'Explain this topic in simple words'
+                    )"
+                >
+
+                    <div class="suggestion-title">
+                        📚 Explain something
+                    </div>
+
+                    <div class="suggestion-text">
+                        Make complicated topics easy.
+                    </div>
+
+                </button>
+
+
+                <button
+                    class="suggestion"
+                    onclick="useSuggestion(
+                        'Help me write something'
+                    )"
+                >
+
+                    <div class="suggestion-title">
+                        ✍️ Help me write
+                    </div>
+
+                    <div class="suggestion-text">
+                        Create or improve your writing.
+                    </div>
+
+                </button>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    input.value =
+        "";
+
+
+    autoResize();
+
+
+    input.focus();
+
+}
+
+
+/* =========================================================
+   ADD MESSAGE
+========================================================= */
+
+function addMessage(
+    text,
+    type,
+    provider = null,
+    attachmentNames = []
+) {
+
+    const welcome =
+        document.getElementById(
+            "welcome"
+        );
+
+
+    if (welcome) {
+
+        welcome.remove();
+
+    }
+
+
+    const row =
+        document.createElement(
+            "div"
+        );
+
+
+    row.className =
+        "message-row " +
+        type;
+
+
+    const avatar =
+        document.createElement(
+            "div"
+        );
+
+
+    avatar.className =
+        "message-avatar " +
+        (
+            type === "user"
+                ? "user-avatar"
+                : "bot-avatar"
+        );
+
+
+    avatar.textContent =
+        type === "user"
+            ? "V"
+            : "✦";
+
+
+    const content =
+        document.createElement(
+            "div"
+        );
+
+
+    content.className =
+        "message-content";
+
+
+    const name =
+        document.createElement(
+            "div"
+        );
+
+
+    name.className =
+        "message-name";
+
+
+    if (
+        type === "user"
+    ) {
+
+        name.textContent =
+            "You";
+
+    }
+
+    else {
+
+        name.textContent =
+            aiNames[provider] ||
+            "AI";
+
+    }
+
+
+    const textElement =
+        document.createElement(
+            "div"
+        );
+
+
+    textElement.className =
+        "message-text";
+
+
+    textElement.textContent =
+        text;
+
+
+    content.appendChild(
+        name
+    );
+
+
+    /* =====================================================
+       ATTACHMENT LABELS
+    ====================================================== */
+
+    if (
+        attachmentNames &&
+        attachmentNames.length
+    ) {
+
+        const files =
+            document.createElement(
+                "div"
+            );
+
+
+        files.style.fontSize =
+            "12px";
+
+        files.style.color =
+            type === "user"
+                ? "#dbeafe"
+                : "var(--muted)";
+
+        files.style.marginBottom =
+            "6px";
+
+
+        files.textContent =
+            "📎 " +
+            attachmentNames.join(
+                ", "
+            );
+
+
+        content.appendChild(
+            files
+        );
+
+    }
+
+
+    content.appendChild(
+        textElement
+    );
+
+
+    if (
+        type === "user"
+    ) {
+
+        row.appendChild(
+            content
+        );
+
+        row.appendChild(
+            avatar
+        );
+
+    }
+
+    else {
+
+        row.appendChild(
+            avatar
+        );
+
+        row.appendChild(
+            content
+        );
+
+    }
+
+
+    chatInner.appendChild(
+        row
+    );
+
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+
+    return row;
+
+}
+
+
+/* =========================================================
+   TYPING INDICATOR
+========================================================= */
+
+function addTyping(provider) {
+
+    const welcome =
+        document.getElementById(
+            "welcome"
+        );
+
+
+    if (welcome) {
+
+        welcome.remove();
+
+    }
+
+
+    const row =
+        document.createElement(
+            "div"
+        );
+
+
+    row.className =
+        "message-row assistant";
+
+
+    row.id =
+        "typing-message";
+
+
+    row.innerHTML = `
+
+        <div class="message-avatar bot-avatar">
+            ✦
+        </div>
+
+        <div class="message-content">
+
+            <div class="message-name">
+                ${aiNames[provider] || "AI"}
+            </div>
+
+            <div class="message-text">
+
+                <div class="typing">
+
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    chatInner.appendChild(
+        row
+    );
+
+
+    chat.scrollTop =
+        chat.scrollHeight;
+
+
+    return row;
+
+}
+
+
+/* =========================================================
+   SEND MESSAGE
+========================================================= */
+
+form.addEventListener(
+    "submit",
+    async function(event) {
+
+        event.preventDefault();
+
+
+        const message =
+            input.value.trim();
+
+
+        const provider =
+            aiSelect.value;
+
+
+        /*
+           Don't send empty messages
+           unless files are attached.
+        */
+
+        if (
+            !message &&
+            attachments.length === 0
+        ) {
+
+            return;
+
+        }
+
+
+        /*
+           Save attachments before
+           clearing them.
+        */
+
+        const sentAttachments =
+            [...attachments];
+
+
+        const attachmentNames =
+            sentAttachments.map(
+                file =>
+                    file.name
+            );
+
+
+        /* =================================================
+           SHOW USER MESSAGE
+        ================================================= */
+
+        addMessage(
+
+            message ||
+            "Attached file(s)",
+
+            "user",
+
+            null,
+
+            attachmentNames
+
+        );
+
+
+        /* =================================================
+           SAVE USER MESSAGE
+        ================================================= */
+
+        conversationHistory.push({
+
+            role:
+                "user",
+
+            content:
+                message ||
+                "[Attached file(s): " +
+                attachmentNames.join(
+                    ", "
+                ) +
+                "]"
+
+        });
+
+
+        /* =================================================
+           TYPING
+        ================================================= */
+
+        const typing =
+            addTyping(
+                provider
+            );
+
+
+        /* =================================================
+           DISABLE
+        ================================================= */
+
+        sendButton.disabled =
+            true;
+
+        input.disabled =
+            true;
+
+
+        try {
+
+            /*
+               Send all previous messages.
+
+               The current user message is already
+               displayed and stored, but history sent
+               to the server excludes the duplicate.
+            */
+
+            const response =
+                await fetch(
+                    `${API_URL}/chat`,
+                    {
+
+                        method:
+                            "POST",
+
+                        headers: {
+
+                            "Content-Type":
+                                "application/json"
+
+                        },
+
+                        body:
+                            JSON.stringify({
+
+                                message,
+
+                                provider,
+
+                                history:
+                                    conversationHistory
+                                        .slice(
+                                            0,
+                                            -1
+                                        ),
+
+                                attachments:
+                                    sentAttachments
+
+                            })
+
+                    }
+                );
+
+
+            const data =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    data.error ||
+                    "AI request failed."
+                );
+
+            }
+
+
+            /* =================================================
+               REMOVE TYPING
+            ================================================= */
+
+            if (typing) {
+
+                typing.remove();
+
+            }
+
+
+            /* =================================================
+               SHOW AI RESPONSE
+            ================================================= */
+
+            addMessage(
+
+                data.reply,
+
+                "assistant",
+
+                provider
+
+            );
+
+
+            /* =================================================
+               SAVE AI RESPONSE TO SHARED HISTORY
+            ================================================= */
+
+            conversationHistory.push({
+
+                role:
+                    "assistant",
+
+                content:
+                    data.reply
+
+            });
+
+
+            /*
+               Files have been sent.
+               Don't send them again automatically.
+            */
+
+            attachments =
+                [];
+
+
+            const preview =
+                document.getElementById(
+                    "attachment-preview"
+                );
+
+
+            if (preview) {
+
+                preview.remove();
+
+            }
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "❌ Chat error:",
+                error
+            );
+
+
+            if (typing) {
+
+                typing.remove();
+
+            }
+
+
+            addMessage(
+
+                "Error: " +
+                error.message,
+
+                "assistant",
+
+                provider
+
+            );
+
+        }
+
+
+        finally {
+
+            sendButton.disabled =
+                false;
+
+            input.disabled =
+                false;
+
+            input.value =
+                "";
+
+            autoResize();
+
+            input.focus();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   SEARCH CHATS
+========================================================= */
+
+if (searchInput) {
+
+    searchInput.addEventListener(
+        "input",
+        function() {
+
+            const query =
+                searchInput.value
+                    .toLowerCase()
+                    .trim();
+
+
+            const items =
+                historyElement
+                    .querySelectorAll(
+                        ".history-item"
+                    );
+
+
+            items.forEach(
+                item => {
+
+                    item.style.display =
+                        item.textContent
+                            .toLowerCase()
+                            .includes(
+                                query
+                            )
+                            ? ""
+                            : "none";
+
+                }
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================================
+   STARTUP
+========================================================= */
+
+input.placeholder =
+    "Message Gemini...";
+
+
+autoResize();
+
+
+input.focus();
+
+</script>
+
+</body>
+
+</html>
