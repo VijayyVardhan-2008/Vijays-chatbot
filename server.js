@@ -319,7 +319,7 @@ async function askGroq(
             body: JSON.stringify({
 
                 model:
-                    "llama-3.1-70b-versatile",
+                    "deepseek-r1-distill-llama-70b",
 
                 messages,
 
