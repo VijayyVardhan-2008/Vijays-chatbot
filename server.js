@@ -319,7 +319,7 @@ async function askGroq(
             body: JSON.stringify({
 
                 model:
-                    "deepseek-r1-distill-llama-70b",
+                    "openai/gpt-oss-120b",
 
                 messages,
 
