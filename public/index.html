@@ -1482,14 +1482,14 @@ body.dark-mode .user-avatar {
                 </button>
 
 
-                <!-- JARVIS VOICE TEST -->
+                <!-- Cortex VOICE TEST -->
 
                 <button
-                    id="jarvisVoiceTest"
+                    id="CortexVoiceTest"
                     class="composer-button"
                     type="button"
-                    title="Test JARVIS voice"
-                    aria-label="Test JARVIS voice"
+                    title="Test Cortex voice"
+                    aria-label="Test Cortex voice"
                 >
                     🔊
                 </button>
@@ -1530,10 +1530,10 @@ const API_URL =
 
 
 /* =========================================================
-   JARVIS ELEVENLABS VOICE
+   Cortex ELEVENLABS VOICE
 ========================================================= */
 
-async function speakJarvis(text) {
+async function speakCortex(text) {
 
     if (!text || !text.trim()) {
         return;
@@ -1541,7 +1541,7 @@ async function speakJarvis(text) {
 
     try {
 
-        console.log("🔊 JARVIS voice:", text);
+        console.log("🔊 Cortex voice:", text);
 
         const response =
             await fetch(
@@ -1608,12 +1608,12 @@ async function speakJarvis(text) {
     catch (error) {
 
         console.error(
-            "❌ JARVIS voice error:",
+            "❌ Cortex voice error:",
             error
         );
 
         alert(
-            "JARVIS voice error:\n" +
+            "Cortex voice error:\n" +
             error.message
         );
     }
@@ -1713,23 +1713,23 @@ const micButton =
     document.getElementById("micButton");
 
 
-const jarvisVoiceTest =
+const CortexVoiceTest =
     document.getElementById(
-        "jarvisVoiceTest"
+        "CortexVoiceTest"
     );
 
 
 /* =========================================================
-   JARVIS VOICE TEST BUTTON
+   Cortex VOICE TEST BUTTON
 ========================================================= */
 
-if (jarvisVoiceTest) {
+if (CortexVoiceTest) {
 
-    jarvisVoiceTest.addEventListener(
+    CortexVoiceTest.addEventListener(
         "click",
         () => {
 
-            speakJarvis(
+            speakCortex(
                 "Yes, Vijay. I am online."
             );
 
