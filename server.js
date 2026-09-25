@@ -18,7 +18,7 @@ const PORT = process.env.PORT || 3000;
 
 console.log("");
 console.log("========================================");
-console.log("       VIJAY'S CHATBOT + JARVIS");
+console.log("       VIJAY'S CHATBOT + Cortex");
 console.log("========================================");
 
 console.log(
@@ -164,10 +164,10 @@ function historyForOpenAIStyle(history) {
 }
 
 // =========================================================
-// JARVIS SSML
+// Cortex SSML
 // =========================================================
 
-function formatJarvisSSML(text) {
+function formatCortexSSML(text) {
 
     const cleanText = String(text)
         .replace(/[*_#`]/g, "")
@@ -420,7 +420,7 @@ async function askOpenRouter(
 }
 
 // =========================================================
-// 🔥 ELEVENLABS JARVIS VOICE
+// 🔥 ELEVENLABS Cortex VOICE
 // =========================================================
 
 app.post("/speak", async (req, res) => {
@@ -458,7 +458,7 @@ app.post("/speak", async (req, res) => {
 
         console.log("");
         console.log(
-            "🔊 JARVIS speaking:",
+            "🔊 Cortex speaking:",
             text
         );
 
@@ -544,7 +544,7 @@ app.post("/speak", async (req, res) => {
     } catch (error) {
 
         console.error(
-            "❌ JARVIS VOICE ERROR:",
+            "❌ Cortex VOICE ERROR:",
             error
         );
 
@@ -871,7 +871,7 @@ app.post("/alexa", async (req, res) => {
                         type: "SSML",
 
                         ssml:
-                            formatJarvisSSML(
+                            formatCortexSSML(
                                 welcomeMsg
                             )
                     },
@@ -899,7 +899,7 @@ app.post("/alexa", async (req, res) => {
             );
 
             let userQuery =
-                "Hello Jarvis";
+                "Hello Cortex";
 
             if (
                 request.intent?.slots
@@ -965,7 +965,7 @@ app.post("/alexa", async (req, res) => {
                         type: "SSML",
 
                         ssml:
-                            formatJarvisSSML(
+                            formatCortexSSML(
                                 aiReply
                             )
                     },
@@ -1008,7 +1008,7 @@ app.post("/alexa", async (req, res) => {
                     type: "SSML",
 
                     ssml:
-                        formatJarvisSSML(
+                        formatCortexSSML(
                             "I am listening, Vijay."
                         )
                 },
@@ -1036,7 +1036,7 @@ app.post("/alexa", async (req, res) => {
                     type: "SSML",
 
                     ssml:
-                        formatJarvisSSML(
+                        formatCortexSSML(
                             "Core systems operational, Vijay."
                         )
                 },
@@ -1059,7 +1059,7 @@ app.get("/test", (req, res) => {
         status:
             "Vijay's Chatbot is online",
 
-        jarvis:
+        Cortex:
             process.env.ELEVENLABS_API_KEY
                 ? "Voice engine loaded"
                 : "Voice engine missing",
@@ -1104,7 +1104,7 @@ app.listen(
         );
 
         console.log(
-            "🎙️ ElevenLabs JARVIS Voice: READY"
+            "🎙️ ElevenLabs Cortex Voice: READY"
         );
 
         console.log(
