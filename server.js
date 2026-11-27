@@ -264,7 +264,7 @@ async function askMISTRAL(
         await MISTRAL.models.generateContent({
 
             model:
-                "MISTRAL-3.6-flash",
+                "mistral-small-latest",
 
             contents
         });
