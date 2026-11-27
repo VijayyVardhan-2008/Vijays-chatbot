@@ -23,7 +23,7 @@ console.log("========================================");
 
 console.log(
     "Gemini API:",
-    process.env.GEMINI_API_KEY ? "✅ Loaded" : "❌ Missing"
+    process.env.MISTRAL_API_KEY ? "✅ Loaded" : "❌ Missing"
 );
 
 console.log(
@@ -104,9 +104,9 @@ app.get("/manifest.json", (req, res) => {
 // GEMINI
 // =========================================================
 
-const gemini = process.env.GEMINI_API_KEY
+const gemini = process.env.MISTRAL_API_KEY
     ? new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY
+        apiKey: process.env.MISTRAL_API_KEY
     })
     : null;
 
@@ -199,7 +199,7 @@ async function askGemini(
 
     if (!gemini) {
         throw new Error(
-            "GEMINI_API_KEY is missing."
+            "MISTRAL_API_KEY is missing."
         );
     }
 
