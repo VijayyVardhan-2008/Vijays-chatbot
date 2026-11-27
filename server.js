@@ -22,7 +22,7 @@ console.log("       VIJAY'S CHATBOT + Cortex");
 console.log("========================================");
 
 console.log(
-    "Gemini API:",
+    "MISTRAL API:",
     process.env.MISTRAL_API_KEY ? "✅ Loaded" : "❌ Missing"
 );
 
@@ -101,10 +101,10 @@ app.get("/manifest.json", (req, res) => {
 });
 
 // =========================================================
-// GEMINI
+// MISTRAL
 // =========================================================
 
-const gemini = process.env.MISTRAL_API_KEY
+const MISTRAL = process.env.MISTRAL_API_KEY
     ? new GoogleGenAI({
         apiKey: process.env.MISTRAL_API_KEY
     })
@@ -188,16 +188,16 @@ function formatCortexSSML(text) {
 }
 
 // =========================================================
-// GEMINI CHAT
+// MISTRAL CHAT
 // =========================================================
 
-async function askGemini(
+async function askMISTRAL(
     message,
     history,
     attachments = []
 ) {
 
-    if (!gemini) {
+    if (!MISTRAL) {
         throw new Error(
             "MISTRAL_API_KEY is missing."
         );
@@ -261,17 +261,17 @@ async function askGemini(
     });
 
     const response =
-        await gemini.models.generateContent({
+        await MISTRAL.models.generateContent({
 
             model:
-                "gemini-3.6-flash",
+                "MISTRAL-3.6-flash",
 
             contents
         });
 
     return (
         response.text ||
-        "Gemini returned no response."
+        "MISTRAL returned no response."
     );
 }
 
@@ -594,15 +594,15 @@ app.post(
                 originalName
             );
 
-            if (!gemini) {
+            if (!MISTRAL) {
 
                 throw new Error(
-                    "Gemini API is not configured."
+                    "MISTRAL API is not configured."
                 );
             }
 
             const uploaded =
-                await gemini.files.upload({
+                await MISTRAL.files.upload({
 
                     file:
                         uploadedPath,
@@ -702,20 +702,20 @@ app.post(
             }
 
             const selectedProvider =
-                provider || "gemini";
+                provider || "MISTRAL";
 
             let reply;
 
             // -------------------------
-            // GEMINI
+            // MISTRAL
             // -------------------------
 
             if (
-                selectedProvider === "gemini"
+                selectedProvider === "MISTRAL"
             ) {
 
                 reply =
-                    await askGemini(
+                    await askMISTRAL(
                         message || "",
                         history,
                         attachments
@@ -937,7 +937,7 @@ app.post("/alexa", async (req, res) => {
             try {
 
                 aiReply =
-                    await askGemini(
+                    await askMISTRAL(
                         userQuery,
                         [],
                         []
@@ -1092,7 +1092,7 @@ app.listen(
         );
 
         console.log(
-            "🧠 Gemini: READY"
+            "🧠 MISTRAL: READY"
         );
 
         console.log(
